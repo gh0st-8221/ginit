@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ -d /run/systemd/system ]; then
+	exec /usr/bin/startx "$@"
+fi
+log=${XDG_STATE_HOME:-$HOME/.local/state}/startx.log
+mkdir -p "${log%/*}"
+exec /usr/bin/startx "$@" >"$log" 2>&1

@@ -1,0 +1,28 @@
+#!/bin/sh
+exec >/var/log/ginit-rc.log 2>&1
+set -x
+
+/usr/lib/systemd/systemd-udevd --daemon
+udevadm trigger --action=add --type=subsystems
+udevadm trigger --action=add --type=devices
+udevadm settle -t 10
+mount -a
+swapon -a
+ip link set lo up
+
+mkdir -p /run/user
+awk -F: '$3 >= 1000 && $3 < 60000 { print $3, $4 }' /etc/passwd | while read -r uid gid; do
+	mkdir -p "/run/user/$uid"
+	chown "$uid:$gid" "/run/user/$uid"
+	chmod 700 "/run/user/$uid"
+done
+
+mkdir -p /etc/X11
+[ -e /etc/X11/Xwrapper.config ] || : > /etc/X11/Xwrapper.config
+echo 'needs_root_rights = yes' > /run/Xwrapper.config
+mount --bind /run/Xwrapper.config /etc/X11/Xwrapper.config
+
+mkdir -p /run/dbus
+dbus-uuidgen --ensure
+dbus-daemon --system --fork
+NetworkManager

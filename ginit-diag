@@ -1,0 +1,25 @@
+#!/bin/sh
+out=${HOME:-/tmp}/ginit-diag.txt
+{
+echo "### date"; date
+echo "### cmdline"; cat /proc/cmdline
+echo "### processes"; ps -eo pid,user,comm | grep -E 'udevd|dbus-daemon|NetworkManager|pipewire|wireplumber|Xorg|agetty' | grep -v grep
+echo "### addresses"; ip -br addr
+echo "### routes"; ip route
+echo "### nmcli"; timeout 5 nmcli general status 2>&1; timeout 5 nmcli device 2>&1
+echo "### dns"; ls -l /etc/resolv.conf 2>&1; cat /etc/resolv.conf 2>&1
+echo "### ping ip"; ping -c1 -W2 1.1.1.1 2>&1
+echo "### ping name"; ping -c1 -W2 archlinux.org 2>&1
+echo "### xdg"; echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR XDG_VTNR=$XDG_VTNR"; ls -ld "/run/user/$(id -u)" 2>&1
+echo "### audio"; timeout 5 wpctl status 2>&1 | head -n 25
+echo "### xwrapper"; cat /etc/X11/Xwrapper.config 2>&1; ls -l /usr/libexec/Xorg.wrap /usr/lib/Xorg.wrap 2>&1
+echo "### xorg log"
+for f in "$HOME/.local/share/xorg/Xorg.0.log" /var/log/Xorg.0.log; do
+	if [ -f "$f" ]; then
+		echo "-- $f"
+		grep -E '\(EE\)|\(WW\)' "$f" | head -n 30
+	fi
+done
+echo "### rc log"; tail -n 60 /var/log/ginit-rc.log 2>&1
+} > "$out" 2>&1
+echo "saved to $out"
